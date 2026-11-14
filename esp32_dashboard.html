@@ -193,6 +193,10 @@
       <label class="check"><input type="checkbox" id="cfgSound" checked> Phát tiếng bíp khi vượt ngưỡng</label>
       <div><label for="cfgChannel">Channel ID (ThingSpeak)</label><input type="text" id="cfgChannel" inputmode="numeric" placeholder="vd: 1234567"></div>
       <div><label for="cfgKey">Read API Key (bỏ trống nếu channel Public)</label><input type="text" id="cfgKey" placeholder="vd: ABCDEF1234567890" autocomplete="off"></div>
+      <div><label for="cfgFbUrl">Firebase Database URL</label><input type="url" id="cfgFbUrl" placeholder="https://TEN-DU-AN-default-rtdb.firebaseio.com" autocomplete="off"></div>
+      <div><label for="cfgFbAuth">Firebase token (bỏ trống nếu rules cho phép)</label><input type="password" id="cfgFbAuth" placeholder="tùy chọn" autocomplete="off"></div>
+      <label class="check"><input type="checkbox" id="cfgFbSave"> Lưu mỗi lần đo lên Firebase (khi nhận USB)</label>
+      <label class="check"><input type="checkbox" id="cfgFbView"> Xem dữ liệu từ Firebase (thay cho ThingSpeak)</label>
       <div><label for="cfgCount">Số bản ghi hiển thị</label><input type="number" id="cfgCount" min="10" max="500" value="60"></div>
       <div><label for="cfgPoll">Làm mới mỗi (giây)</label><input type="number" id="cfgPoll" min="5" max="300" value="20"></div>
       <label class="check"><input type="checkbox" id="cfgDemo"> Chế độ demo (dữ liệu giả lập)</label>
@@ -445,7 +449,9 @@ const LEVELS = [                       // mức sáng (lux) – thang xanh theo 
 ];
 const MODE_NAMES = { idle: 'Chưa kết nối', usb: 'USB trực tiếp (Web Serial)', cloud: 'Đám mây (ESP32 → WiFi → ThingSpeak)', demo: 'Demo (dữ liệu giả lập)' };
 
-let cfg = { channel: '', key: '', count: 60, poll: 20, demo: false, alertTemp: 31, alertLux: 5, sound: true };
+let cfg = { channel: '', key: '', count: 60, poll: 20, demo: false, alertTemp: 31, alertLux: 5, sound: true,
+            fbUrl: '', fbAuth: '', fbSave: false, fbView: false };
+let fbLast = 0, fbOk = 0, fbErr = '';
 let rows = [];            // {t: Date, temp, hum, lux}
 let timer = null, demoRows = null, lastRaw = '';
 let charts = {};
@@ -458,6 +464,8 @@ function loadCfg() {
   $('cfgChannel').value = cfg.channel; $('cfgKey').value = cfg.key;
   $('cfgCount').value = cfg.count; $('cfgPoll').value = cfg.poll; $('cfgDemo').checked = cfg.demo;
   $('cfgAlert').value = cfg.alertTemp; $('cfgLux').value = cfg.alertLux; $('cfgSound').checked = cfg.sound;
+  $('cfgFbUrl').value = cfg.fbUrl; $('cfgFbAuth').value = cfg.fbAuth;
+  $('cfgFbSave').checked = cfg.fbSave; $('cfgFbView').checked = cfg.fbView;
 }
 function saveCfg() { try { localStorage.setItem(LS_KEY, JSON.stringify(cfg)); } catch (e) {} }
 function readForm() {
@@ -466,6 +474,10 @@ function readForm() {
   cfg.count = Math.min(500, Math.max(10, +$('cfgCount').value || 60));
   cfg.poll = Math.min(300, Math.max(5, +$('cfgPoll').value || 20));
   cfg.demo = $('cfgDemo').checked;
+  cfg.fbUrl = $('cfgFbUrl').value.trim().replace(/\/+$/, '').replace(/\.json$/, '');
+  cfg.fbAuth = $('cfgFbAuth').value.trim();
+  cfg.fbSave = $('cfgFbSave').checked;
+  cfg.fbView = $('cfgFbView').checked;
   readAlertForm();
 }
 function readAlertForm() {
@@ -483,7 +495,39 @@ function setStatus(text, cls) {
 }
 function setMode(m) {
   document.body.dataset.mode = m;
-  $('modeLabel').textContent = MODE_NAMES[m];
+  $('modeLabel').textContent = (m === 'cloud' && cfg.fbView && !cfg.demo) ? 'Đám mây (Firebase Realtime Database)' : MODE_NAMES[m];
+}
+
+/* ---------- Firebase Realtime Database (REST, không cần SDK) ---------- */
+function fbEndpoint(path, query) {
+  const q = new URLSearchParams(query || {});
+  if (cfg.fbAuth) q.set('auth', cfg.fbAuth);
+  const s = q.toString();
+  return `${cfg.fbUrl}/${path}.json${s ? '?' + s : ''}`;
+}
+async function fbSave(r) {                       // ghi 1 lần đo: POST tạo khóa mới theo thời gian
+  if (!cfg.fbSave || !/^(https:\/\/|http:\/\/localhost).+/.test(cfg.fbUrl)) return;
+  const now = Date.now();
+  if (now - fbLast < 5000) return;               // tối đa 1 bản ghi / 5 giây
+  fbLast = now;
+  const hot = r.temp >= cfg.alertTemp, dark = r.lux !== null && r.lux <= cfg.alertLux;
+  try {
+    const res = await fetch(fbEndpoint('readings'), { method: 'POST', body: JSON.stringify(
+      { ts: r.t.getTime(), temp: r.temp, hum: r.hum, lux: r.lux, alert: hot || dark }) });
+    if (!res.ok) throw new Error(res.status === 401 || res.status === 403 ? 'rules từ chối ghi (HTTP ' + res.status + ')' : 'HTTP ' + res.status);
+    fbOk++; fbErr = '';
+  } catch (e) { fbErr = e.message; }
+  setStatus(fbErr ? 'Firebase lỗi: ' + fbErr : 'USB · đã lưu ' + fbOk + ' bản ghi lên Firebase', fbErr ? 'bad' : 'ok');
+}
+async function fetchFirebase() {                 // đọc N bản ghi mới nhất (khóa push tăng theo thời gian)
+  if (!/^(https:\/\/|http:\/\/localhost).+/.test(cfg.fbUrl)) { setStatus('Chưa nhập Firebase Database URL', 'bad'); return null; }
+  const res = await fetch(fbEndpoint('readings', { orderBy: '"$key"', limitToLast: cfg.count }), { cache: 'no-store' });
+  if (!res.ok) throw new Error(res.status === 401 || res.status === 403 ? 'rules không cho đọc (HTTP ' + res.status + ')' : 'HTTP ' + res.status);
+  const j = await res.json() || {};
+  const num = v => (v === null || v === undefined) ? null : +v;
+  return Object.keys(j).sort().map(k => j[k])
+    .map(f => ({ t: new Date(f.ts), temp: num(f.temp), hum: num(f.hum), lux: num(f.lux) }))
+    .filter(r => !isNaN(r.t));
 }
 
 /* ---------- lấy dữ liệu ---------- */
@@ -520,7 +564,7 @@ function demoPoint(t, prev) {
 
 async function refresh() {
   try {
-    const data = cfg.demo ? makeDemo() : await fetchThingSpeak();
+    const data = cfg.demo ? makeDemo() : cfg.fbView ? await fetchFirebase() : await fetchThingSpeak();
     if (data === null) return;
     rows = data;
     const l = rows[rows.length - 1];
@@ -541,6 +585,7 @@ function start() {
   clearInterval(timer); demoRows = null; rows = []; lastRaw = '';
   setMode(cfg.demo ? 'demo' : 'cloud');
   setStatus('Đang kết nối…', '');
+  if (!cfg.demo && !cfg.fbView && !cfg.channel) { setMode('idle'); setStatus('Hãy bấm “Kết nối USB” hoặc nhập cấu hình', ''); return; }
   refresh();
   timer = setInterval(refresh, (cfg.demo ? Math.min(cfg.poll, 3) : cfg.poll) * 1000);
 }
@@ -944,6 +989,7 @@ function usbLine(line) {
     if (rows.length > cfg.count) rows.shift();
     render();
     setStatus('USB · đang nhận dữ liệu · ' + hhmmss(new Date()), 'ok');
+    fbSave(rows[rows.length - 1]);
   } else if (/LOI|CANH BAO/i.test(line)) {
     lastRaw = line;
     renderPrinciple();
@@ -985,7 +1031,7 @@ window.addEventListener('load', () => {
   $('btnPlay').addEventListener('click', togglePlay);
   setStep(0);
   render();
-  if (cfg.demo || cfg.channel) { $('settings').open = false; start(); }
+  if (cfg.demo || cfg.channel || (cfg.fbView && cfg.fbUrl)) { $('settings').open = false; start(); }
 });
 </script>
 </body>

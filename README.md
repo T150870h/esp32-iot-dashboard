@@ -25,3 +25,30 @@ Bài thực hành IoT: ESP32 đo nhiệt độ, độ ẩm (DHT11) và ánh sán
 3. Bấm **Kết nối USB (ESP32)** và chọn cổng COM (đóng Serial Monitor trước). Hoặc tick **Chế độ demo** để xem thử không cần mạch.
 
 Windows cần driver CP210x (Silicon Labs) nếu không thấy cổng COM của ESP32.
+
+## Lưu dữ liệu lên Firebase (tùy chọn)
+
+Trang web ghi mỗi lần đo lên **Firebase Realtime Database** bằng REST (không cần cài SDK), và có thể đọc lại từ bất kỳ máy nào.
+URL và token chỉ nhập trong ô Cấu hình (lưu trong trình duyệt), **không nằm trong mã nguồn**.
+
+1. Vào <https://console.firebase.google.com> → **Add project** → **Build → Realtime Database → Create database** (chọn vùng bất kỳ).
+2. Tab **Rules**, dán đoạn dưới rồi **Publish**: ai cũng đọc được, chỉ được *thêm* bản ghi đúng định dạng, không sửa hoặc xóa.
+
+   ```json
+   {
+     "rules": {
+       "readings": {
+         ".read": true,
+         "$id": {
+           ".write": "!data.exists()",
+           ".validate": "newData.hasChildren(['ts','temp','hum']) && newData.child('ts').isNumber() && newData.child('temp').isNumber() && newData.child('hum').isNumber()"
+         }
+       }
+     }
+   }
+   ```
+3. Chép **Database URL** (dạng `https://<tên-dự-án>-default-rtdb.firebaseio.com`) vào ô *Firebase Database URL* trong Cấu hình.
+4. **Lưu:** tick *Lưu mỗi lần đo lên Firebase*, bấm **Kết nối USB**; cứ 5 giây trang ghi 1 bản ghi `{ts, temp, hum, lux, alert}` vào nút `readings`.
+5. **Xem lại:** tick *Xem dữ liệu từ Firebase*, bấm **Áp dụng & kết nối**; trang đọc N bản ghi mới nhất và làm mới theo chu kỳ. Máy khác chỉ cần dán cùng URL.
+
+Lưu ý: URL cơ sở dữ liệu mà bị lộ thì người khác có thể thêm bản ghi giả. Với dự án học tập thì chấp nhận được; muốn chặt hơn, đặt `".write": "auth != null"` và dùng ô *Firebase token*.
