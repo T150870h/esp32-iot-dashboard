@@ -237,7 +237,7 @@
         <rect class="box" x="20" y="230" width="210" height="110" rx="10"/>
         <text class="t-title" x="36" y="255">BH1750</text>
         <text x="36" y="274">Ánh sáng (lux)</text>
-        <text x="36" y="292" class="t-wire">SDA → D21 · SCL → D22</text>
+        <text x="36" y="292" class="t-wire">SDA → D21 · SCL → D19</text>
         <text id="fLux" class="t-live" x="36" y="322">-- lux</text>
 
         <!-- ESP32 -->
@@ -287,7 +287,7 @@
     <div class="raw">Dữ liệu vừa nhận (đi qua đường đang dùng):<code id="rawLine">—</code></div>
 
     <ol class="steps">
-      <li><b>Cảm biến đo.</b> DHT11 gồm cảm biến điện dung (độ ẩm) và nhiệt điện trở (nhiệt độ), gửi kết quả số về chân D4 bằng 1 dây. BH1750 có photodiode và bộ ADC 16 bit, trả số lux qua I2C (SDA D21, SCL D22, địa chỉ 0x23).</li>
+      <li><b>Cảm biến đo.</b> DHT11 gồm cảm biến điện dung (độ ẩm) và nhiệt điện trở (nhiệt độ), gửi kết quả số về chân D4 bằng 1 dây. BH1750 có photodiode và bộ ADC 16 bit, trả số lux qua I2C (SDA D21, SCL D19, địa chỉ 0x23).</li>
       <li><b>ESP32 xử lý.</b> Mỗi 2 giây ESP32 đọc cả hai cảm biến, kiểm tra lỗi. Nếu nhiệt độ ≥ ngưỡng cảnh báo thì LED GPIO2 trên board nháy liên tục.</li>
       <li><b>Đóng gói thành 1 dòng chữ.</b> Ví dụ <code style="font:12px ui-monospace,Consolas,monospace">Nhiet do: 27.4 C | Do am: 69 % | Anh sang: 320.0 lux</code> được in ra cổng USB.</li>
       <li><b>Hai đường về trình duyệt.</b> (A) <b>USB:</b> trang web dùng Web Serial đọc trực tiếp dòng chữ trên. (B) <b>Đám mây:</b> ESP32 gửi mỗi 20 giây lên ThingSpeak qua WiFi, trang web gọi REST API lấy các bản ghi gần nhất.</li>
@@ -299,7 +299,7 @@
       <thead><tr><th>Linh kiện</th><th>Chân module</th><th>Chân ESP32</th><th>Ghi chú</th></tr></thead>
       <tbody>
         <tr><td>DHT11</td><td>S (+, −)</td><td>D4 (3V3, GND)</td><td>1 dây dữ liệu, module có sẵn điện trở kéo lên</td></tr>
-        <tr><td>BH1750</td><td>SDA, SCL</td><td>D21, D22</td><td>I2C, ADDR để trống → địa chỉ 0x23</td></tr>
+        <tr><td>BH1750</td><td>SDA, SCL</td><td>D21, D19</td><td>I2C, ADDR để trống → địa chỉ 0x23</td></tr>
         <tr><td>BH1750</td><td>VCC, GND</td><td>3V3, GND</td><td>cấp nguồn 3,3 V</td></tr>
       </tbody>
     </table>

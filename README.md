@@ -8,7 +8,7 @@ Bài thực hành IoT: ESP32 đo nhiệt độ, độ ẩm (DHT11) và ánh sán
 | Linh kiện | Chân module | Chân ESP32 |
 |---|---|---|
 | DHT11 | S, +, − | D4, 3V3, GND |
-| BH1750 | SDA, SCL | D21, D22 |
+| BH1750 | SDA (DAT), SCL | D21, D19 |
 | BH1750 | VCC, GND | 3V3, GND (ADDR để trống → 0x23) |
 
 ## Thành phần

@@ -3,7 +3,8 @@
 
   Day noi (theo so do):
     DHT11  : S -> D4,  + -> 3V3,  - -> GND
-    BH1750 : SDA -> D21, SCL -> D22, VCC -> 3V3, GND -> GND, ADDR de trong (dia chi 0x23)
+    BH1750 : SDA (DAT, day trang) -> D21, SCL (day nau) -> D19, VCC (day do) -> 3V3, GND (day den) -> GND,
+             ADDR (day vang) de trong (dia chi 0x23)
 
   Hai che do:
     USE_WIFI = false : chi in du lieu ra cong USB moi 2 giay (dung de thu ngay, khong can WiFi)
@@ -40,7 +41,7 @@ const char* TS_WRITE_KEY  = "WRITE_API_KEY_CUA_CHANNEL";
 #define DHT_PIN   4
 #define DHT_TYPE  DHT11
 #define SDA_PIN   21
-#define SCL_PIN   22
+#define SCL_PIN   19   // day NAU = SCL (day vang la ADDR, de trong)
 
 const unsigned long READ_INTERVAL_MS = 2000;    // DHT11 doc toi da ~1 lan/giay
 const unsigned long SEND_INTERVAL_MS = 20000;   // ThingSpeak mien phi: >= 15 giay
