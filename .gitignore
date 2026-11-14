@@ -1,2 +1,9 @@
 # Công cụ biên dịch tải về (≈40 MB), không đưa lên git
 tools/arduino-cli/
+
+# Báo cáo (có tên, mã sinh viên): giữ trên máy, không đưa lên git
+*.docx
+*.pdf
+~$*
+~WRL*.tmp
+hinh_baocao/
