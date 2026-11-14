@@ -6,9 +6,12 @@
     BH1750 : SDA (DAT, day trang) -> D21, SCL (day nau) -> D19, VCC (day do) -> 3V3, GND (day den) -> GND,
              ADDR (day vang) de trong (dia chi 0x23)
 
-  Hai che do:
-    USE_WIFI = false : chi in du lieu ra cong USB moi 2 giay (dung de thu ngay, khong can WiFi)
-    USE_WIFI = true  : ngoai in USB, con gui len ThingSpeak moi 20 giay
+  Hai che do (tu chon):
+    Khong co file wifi_config.h : chi in du lieu ra cong USB moi 2 giay (khong can WiFi)
+    Co file wifi_config.h       : ngoai in USB, ESP32 tu ket noi WiFi 2.4 GHz va gui len
+                                  Firebase Realtime Database moi 10 giay (khong can may tinh)
+                                  (neu khai bao them TS_WRITE_KEY thi gui ca ThingSpeak moi 20 giay)
+  Tao wifi_config.h tu wifi_config.h.example (file nay KHONG duoc dua len GitHub).
 
   Thu vien can cai (Arduino IDE -> Tools -> Manage Libraries):
     - "DHT sensor library" (Adafruit)  + "Adafruit Unified Sensor"
@@ -20,12 +23,14 @@
 #include <DHT.h>
 #include <BH1750.h>
 
-// ====== CAU HINH ======
-#define USE_WIFI false              // doi thanh true khi muon gui len ThingSpeak
-const char* WIFI_SSID     = "TEN_WIFI";
-const char* WIFI_PASSWORD = "MAT_KHAU_WIFI";
-const char* TS_WRITE_KEY  = "WRITE_API_KEY_CUA_CHANNEL";
-// ======================
+// ====== CAU HINH WIFI (nam trong wifi_config.h, khong dua len GitHub) ======
+#if __has_include("wifi_config.h")
+  #include "wifi_config.h"          // dinh nghia WIFI_SSID, WIFI_PASSWORD, FIREBASE_URL (va TS_WRITE_KEY tuy chon)
+  #define USE_WIFI true
+#else
+  #define USE_WIFI false
+#endif
+// ===========================================================================
 
 #if USE_WIFI
   #include <WiFi.h>
@@ -48,11 +53,12 @@ const char* TS_WRITE_KEY  = "WRITE_API_KEY_CUA_CHANNEL";
 
 const unsigned long READ_INTERVAL_MS = 2000;    // DHT11 doc toi da ~1 lan/giay
 const unsigned long SEND_INTERVAL_MS = 20000;   // ThingSpeak mien phi: >= 15 giay
+const unsigned long FB_INTERVAL_MS   = 10000;   // gui Firebase moi 10 giay
 
 DHT dht(DHT_PIN, DHT_TYPE);
 BH1750 lightMeter;  // ADDR de trong -> 0x23
 
-unsigned long lastRead = 0, lastSend = 0, lastBlink = 0;
+unsigned long lastRead = 0, lastSend = 0, lastFb = 0, lastBlink = 0;
 bool alertActive = false, tempAlert = false, luxAlert = false;
 
 #if USE_WIFI
@@ -73,6 +79,7 @@ void connectWiFi() {
   }
 }
 
+#ifdef TS_WRITE_KEY
 bool sendToThingSpeak(float t, float h, float lux) {
   WiFiClientSecure client;
   client.setInsecure();  // bai thuc hanh: bo qua kiem tra chung chi
@@ -86,6 +93,26 @@ bool sendToThingSpeak(float t, float h, float lux) {
   http.end();
   Serial.printf("ThingSpeak: HTTP %d, entry %s\n", code, body.c_str());
   return code == 200 && body != "0";
+}
+#endif
+
+// Gui 1 ban ghi len Firebase Realtime Database (REST). Thoi gian do may chu Firebase dong dau (".sv":"timestamp")
+bool sendToFirebase(float t, float h, float lux, bool alert) {
+  WiFiClientSecure client;
+  client.setInsecure();  // bai thuc hanh: bo qua kiem tra chung chi
+  HTTPClient http;
+  String url = String(FIREBASE_URL);
+  if (url.endsWith("/")) url.remove(url.length() - 1);
+  url += "/readings.json";
+  if (!http.begin(client, url)) return false;
+  http.addHeader("Content-Type", "application/json");
+  String body = "{\"ts\":{\".sv\":\"timestamp\"},\"temp\":" + String(t, 1) + ",\"hum\":" + String(h, 0) +
+                ",\"lux\":" + (lux >= 0 ? String(lux, 1) : String("null")) +
+                ",\"alert\":" + (alert ? "true" : "false") + "}";
+  int code = http.POST(body);
+  http.end();
+  Serial.printf("Firebase: HTTP %d\n", code);
+  return code == 200;
 }
 #endif
 
@@ -140,10 +167,16 @@ void loop() {
       if (lux >= 0) luxAlert = dark;
       alertActive = tempAlert || luxAlert;
 #if USE_WIFI
+      if (millis() - lastFb >= FB_INTERVAL_MS || lastFb == 0) {
+        connectWiFi();
+        if (WiFi.status() == WL_CONNECTED && sendToFirebase(t, h, lux, alertActive)) lastFb = millis();  // that bai: thu lai o lan doc sau
+      }
+  #ifdef TS_WRITE_KEY
       if (millis() - lastSend >= SEND_INTERVAL_MS || lastSend == 0) {
         connectWiFi();
-        if (WiFi.status() == WL_CONNECTED && sendToThingSpeak(t, h, lux)) lastSend = millis();  // that bai: thu lai o lan doc sau
+        if (WiFi.status() == WL_CONNECTED && sendToThingSpeak(t, h, lux)) lastSend = millis();
       }
+  #endif
 #endif
     }
   }

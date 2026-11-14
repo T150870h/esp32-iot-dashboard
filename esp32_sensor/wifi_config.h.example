@@ -1,0 +1,7 @@
+// Sao chep file nay thanh wifi_config.h (cung thu muc), dien thong tin that. wifi_config.h KHONG duoc dua len GitHub.
+// ESP32 chi ket noi duoc WiFi 2.4 GHz (khong dung mang 5 GHz).
+#define WIFI_SSID      "TEN_WIFI"
+#define WIFI_PASSWORD  "MAT_KHAU_WIFI"
+#define FIREBASE_URL   "https://TEN-DU-AN-default-rtdb.firebaseio.com"
+// Tuy chon: bo // o dong duoi de gui them len ThingSpeak
+// #define TS_WRITE_KEY "WRITE_API_KEY_CUA_CHANNEL"

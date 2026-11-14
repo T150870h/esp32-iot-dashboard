@@ -11,3 +11,4 @@ hinh_baocao/
 .vercel/
 .vercel
 .env*
+esp32_sensor/wifi_config.h
