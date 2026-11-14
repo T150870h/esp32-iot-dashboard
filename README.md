@@ -1,7 +1,7 @@
 # Giám sát môi trường với ESP32 (DHT11 + BH1750)
 
 Bài thực hành IoT: ESP32 đo nhiệt độ, độ ẩm (DHT11) và ánh sáng (BH1750), hiển thị trên web bằng
-đồ thị đường, cột, tròn, phân tán; cảnh báo khi nhiệt độ ≥ 31 °C.
+đồ thị đường, cột, tròn, phân tán; cảnh báo khi nhiệt độ ≥ 31 °C hoặc ánh sáng ≤ 5 lux (quá tối).
 
 ## Sơ đồ nối dây
 
@@ -14,7 +14,7 @@ Bài thực hành IoT: ESP32 đo nhiệt độ, độ ẩm (DHT11) và ánh sán
 ## Thành phần
 
 - `esp32_sensor/esp32_sensor.ino` – firmware. `USE_WIFI false` chỉ in dữ liệu ra USB; `true` gửi thêm lên ThingSpeak
-  (điền `WIFI_SSID`, `WIFI_PASSWORD`, `TS_WRITE_KEY`). LED GPIO2 nháy khi nhiệt độ ≥ `ALERT_TEMP`.
+  (điền `WIFI_SSID`, `WIFI_PASSWORD`, `TS_WRITE_KEY`). LED GPIO2 nháy khi nhiệt độ ≥ `ALERT_TEMP` (31 °C) hoặc ánh sáng ≤ `ALERT_LUX` (5 lux).
 - `esp32_dashboard.html` – trang web (Chart.js). Nguồn dữ liệu: USB (Web Serial), ThingSpeak, hoặc chế độ demo.
 - `tools/i2c_diag`, `tools/i2c_scan` – chương trình chẩn đoán I2C khi BH1750 không phản hồi.
 

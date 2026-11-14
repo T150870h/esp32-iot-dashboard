@@ -34,7 +34,10 @@ const char* TS_WRITE_KEY  = "WRITE_API_KEY_CUA_CHANNEL";
 #endif
 
 #ifndef ALERT_TEMP
-#define ALERT_TEMP 31.0   // nhiet do canh bao (do C): vuot nguong thi LED xanh tren board (GPIO2) nhap nhay
+#define ALERT_TEMP 31.0   // nhiet do canh bao (do C): >= nguong thi LED xanh tren board (GPIO2) nhap nhay
+#endif
+#ifndef ALERT_LUX
+#define ALERT_LUX 5.0     // anh sang canh bao (lux): <= nguong (qua toi) thi LED cung nhap nhay
 #endif
 #define LED_PIN    2
 
@@ -50,7 +53,7 @@ DHT dht(DHT_PIN, DHT_TYPE);
 BH1750 lightMeter;  // ADDR de trong -> 0x23
 
 unsigned long lastRead = 0, lastSend = 0, lastBlink = 0;
-bool alertActive = false;
+bool alertActive = false, tempAlert = false, luxAlert = false;
 
 #if USE_WIFI
 void connectWiFi() {
@@ -127,10 +130,15 @@ void loop() {
     } else {
       // Dinh dang nay duoc trang web phan tich - dung doi
       Serial.printf("Nhiet do: %.1f C | Do am: %.0f %% | Anh sang: %.1f lux\n", t, h, lux);
-      bool hot = t >= ALERT_TEMP;
-      if (hot && !alertActive) Serial.printf("CANH BAO: nhiet do %.1f C vuot nguong %.1f C\n", t, (float)ALERT_TEMP);
-      if (!hot && alertActive) Serial.println("Nhiet do da tro ve binh thuong.");
-      alertActive = hot;
+      bool hot  = t >= ALERT_TEMP;
+      bool dark = lux >= 0 && lux <= ALERT_LUX;     // lux = -1 (BH1750 loi) thi bo qua dieu kien anh sang
+      if (hot && !tempAlert)   Serial.printf("CANH BAO: nhiet do %.1f C vuot nguong %.1f C\n", t, (float)ALERT_TEMP);
+      if (!hot && tempAlert)   Serial.println("Nhiet do da tro ve binh thuong.");
+      if (dark && !luxAlert)   Serial.printf("CANH BAO: anh sang %.1f lux xuong thap, nguong %.1f lux\n", lux, (float)ALERT_LUX);
+      if (!dark && luxAlert && lux >= 0) Serial.println("Anh sang da tro ve binh thuong.");
+      tempAlert = hot;
+      if (lux >= 0) luxAlert = dark;
+      alertActive = tempAlert || luxAlert;
 #if USE_WIFI
       if (millis() - lastSend >= SEND_INTERVAL_MS || lastSend == 0) {
         connectWiFi();

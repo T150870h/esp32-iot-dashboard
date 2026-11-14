@@ -188,7 +188,8 @@
   <details class="settings" id="settings" open>
     <summary>Cấu hình</summary>
     <div class="form">
-      <div><label for="cfgAlert">Ngưỡng cảnh báo nhiệt độ (°C)</label><input type="number" id="cfgAlert" min="0" max="80" step="0.5" value="31"></div>
+      <div><label for="cfgAlert">Cảnh báo khi nhiệt độ ≥ (°C)</label><input type="number" id="cfgAlert" min="0" max="80" step="0.5" value="31"></div>
+      <div><label for="cfgLux">Cảnh báo khi ánh sáng ≤ (lux)</label><input type="number" id="cfgLux" min="0" max="1000" step="1" value="5"></div>
       <label class="check"><input type="checkbox" id="cfgSound" checked> Phát tiếng bíp khi vượt ngưỡng</label>
       <div><label for="cfgChannel">Channel ID (ThingSpeak)</label><input type="text" id="cfgChannel" inputmode="numeric" placeholder="vd: 1234567"></div>
       <div><label for="cfgKey">Read API Key (bỏ trống nếu channel Public)</label><input type="text" id="cfgKey" placeholder="vd: ABCDEF1234567890" autocomplete="off"></div>
@@ -212,8 +213,8 @@
       <div class="value" id="vH">--</div>
       <div class="stats" id="sH"></div>
     </div>
-    <div class="card">
-      <div class="label"><span class="swatch" style="background:var(--c-lux)"></span>Ánh sáng</div>
+    <div class="card" id="cardL">
+      <div class="label"><span class="swatch" style="background:var(--c-lux)"></span>Ánh sáng<span class="badge" id="bL">--</span></div>
       <div class="value" id="vL">--</div>
       <div class="stats" id="sL"></div>
     </div>
@@ -229,7 +230,7 @@
       <div class="chart-box nodata"><canvas id="chH" role="img" aria-label="Đồ thị đường độ ẩm theo thời gian"></canvas><div class="empty">Chờ dữ liệu…</div></div>
     </div>
     <div class="card">
-      <h2>Ánh sáng – 12 lần đo gần nhất</h2><p class="desc">Đồ thị cột · lux</p>
+      <h2>Ánh sáng – 12 lần đo gần nhất</h2><p class="desc">Đồ thị cột · lux · cột đỏ là lần đo ≤ ngưỡng ánh sáng (quá tối)</p>
       <div class="chart-box nodata"><canvas id="chB" role="img" aria-label="Đồ thị cột ánh sáng 12 lần đo gần nhất"></canvas><div class="empty">Chờ dữ liệu…</div></div>
     </div>
     <div class="card">
@@ -386,18 +387,25 @@
         <p class="note">Biểu thức chính quy: <code>/Nhiet do:\s*(-?[\d.]+)\s*C.*Do am:\s*([\d.]+)\s*%.*Anh sang:\s*(-?[\d.]+)/i</code></p>
       </div>
       <div class="sub" style="grid-column: 1 / -1">
-        <h3>Logic cảnh báo</h3>
+        <h3>Logic cảnh báo (hai điều kiện độc lập)</h3>
         <div class="alogic">
           <div class="al-box"><span class="al-k">nhiệt độ mới nhất</span><b id="alT">--</b></div>
           <div class="al-op">≥</div>
           <div class="al-box"><span class="al-k">ngưỡng (chỉnh được)</span><b id="alThr">31 °C</b></div>
           <div class="al-op">→</div>
-          <div class="al-box" id="alRes"><span class="al-k">kết quả</span><b id="alResTxt">--</b></div>
+          <div class="al-box" id="alRes"><span class="al-k">nhiệt độ</span><b id="alResTxt">--</b></div>
+        </div>
+        <div class="alogic">
+          <div class="al-box"><span class="al-k">ánh sáng mới nhất</span><b id="alL">--</b></div>
+          <div class="al-op">≤</div>
+          <div class="al-box"><span class="al-k">ngưỡng (chỉnh được)</span><b id="alLThr">5 lux</b></div>
+          <div class="al-op">→</div>
+          <div class="al-box" id="alLRes"><span class="al-k">ánh sáng</span><b id="alLResTxt">--</b></div>
         </div>
         <ul>
-          <li><b>Trên trang web:</b> khi vừa chuyển từ bình thường sang vượt ngưỡng thì đổi banner sang đỏ và bíp hai tiếng (chỉ một lần, không bíp lặp); mỗi lần đo vượt ngưỡng đều có chấm đỏ trên đồ thị và dòng đỏ trong bảng.</li>
-          <li><b>Trên ESP32:</b> cùng một phép so sánh <code>t ≥ ALERT_TEMP</code> (31 °C trong firmware); khi đúng thì LED GPIO2 nháy 250 ms, serial in <code>CANH BAO</code>. Phần này chạy độc lập với trình duyệt.</li>
-          <li><b>Hai ngưỡng tách riêng:</b> đổi ngưỡng trên web không đổi ngưỡng của LED; muốn đổi LED phải sửa <code>ALERT_TEMP</code> rồi nạp lại firmware.</li>
+          <li><b>Trên trang web:</b> khi MỘT điều kiện vừa chuyển từ bình thường sang cảnh báo thì banner đỏ và bíp hai tiếng (chỉ một lần, không bíp lặp). Nhiệt độ vượt ngưỡng: chấm đỏ trên đồ thị đường. Ánh sáng quá tối: cột đỏ trên đồ thị cột. Cả hai đều có dòng đỏ trong bảng.</li>
+          <li><b>Trên ESP32:</b> cùng hai phép so sánh <code>t ≥ ALERT_TEMP</code> (31 °C) hoặc <code>lux ≤ ALERT_LUX</code> (5 lux); khi một trong hai đúng thì LED GPIO2 nháy 250 ms, serial in <code>CANH BAO</code>. Phần này chạy độc lập với trình duyệt; khi BH1750 lỗi (lux = −1) thì bỏ qua điều kiện ánh sáng.</li>
+          <li><b>Ngưỡng tách riêng:</b> đổi ngưỡng trên web không đổi ngưỡng của LED; muốn đổi LED phải sửa <code>ALERT_TEMP</code> hoặc <code>ALERT_LUX</code> rồi nạp lại firmware.</li>
         </ul>
       </div>
     </div>
@@ -437,18 +445,19 @@ const LEVELS = [                       // mức sáng (lux) – thang xanh theo 
 ];
 const MODE_NAMES = { idle: 'Chưa kết nối', usb: 'USB trực tiếp (Web Serial)', cloud: 'Đám mây (ESP32 → WiFi → ThingSpeak)', demo: 'Demo (dữ liệu giả lập)' };
 
-let cfg = { channel: '', key: '', count: 60, poll: 20, demo: false, alertTemp: 31, sound: true };
+let cfg = { channel: '', key: '', count: 60, poll: 20, demo: false, alertTemp: 31, alertLux: 5, sound: true };
 let rows = [];            // {t: Date, temp, hum, lux}
 let timer = null, demoRows = null, lastRaw = '';
 let charts = {};
-let wasHot = false, hotSince = null, audioCtx = null;
+let wasHot = false, wasT = false, wasL = false, hotSince = null, audioCtx = null;
+let alertState = { hotT: false, darkL: false };
 
 /* ---------- cấu hình ---------- */
 function loadCfg() {
   try { Object.assign(cfg, JSON.parse(localStorage.getItem(LS_KEY) || '{}')); } catch (e) {}
   $('cfgChannel').value = cfg.channel; $('cfgKey').value = cfg.key;
   $('cfgCount').value = cfg.count; $('cfgPoll').value = cfg.poll; $('cfgDemo').checked = cfg.demo;
-  $('cfgAlert').value = cfg.alertTemp; $('cfgSound').checked = cfg.sound;
+  $('cfgAlert').value = cfg.alertTemp; $('cfgLux').value = cfg.alertLux; $('cfgSound').checked = cfg.sound;
 }
 function saveCfg() { try { localStorage.setItem(LS_KEY, JSON.stringify(cfg)); } catch (e) {} }
 function readForm() {
@@ -462,6 +471,8 @@ function readForm() {
 function readAlertForm() {
   const v = parseFloat($('cfgAlert').value);
   cfg.alertTemp = isNaN(v) ? 31 : v;
+  const lv = parseFloat($('cfgLux').value);
+  cfg.alertLux = isNaN(lv) ? 5 : lv;
   cfg.sound = $('cfgSound').checked;
 }
 
@@ -503,7 +514,7 @@ function makeDemo() {              // dữ liệu giả lập: 60 điểm trong 
 function demoPoint(t, prev) {
   const w = (v, d, lo, hi) => Math.min(hi, Math.max(lo, v + (Math.random() - .5) * d));
   if (!prev) return { t, temp: 29, hum: 65, lux: 320 };
-  const lux = Math.random() < .08 ? (Math.random() < .5 ? 20 : 1400) : w(prev.lux, 140, 5, 1600);
+  const lux = Math.random() < .08 ? (Math.random() < .5 ? 2 : 1400) : w(prev.lux, 140, 5, 1600);
   return { t, temp: w(prev.temp, 1.4, 24, 36), hum: w(prev.hum, 3, 35, 90), lux };
 }
 
@@ -548,34 +559,49 @@ function beep() {
   } catch (e) {}
 }
 
+// Hai điều kiện cảnh báo độc lập: nhiệt độ ≥ ngưỡng, ánh sáng ≤ ngưỡng (quá tối)
 function updateAlert(sT) {
-  const thr = cfg.alertTemp;
-  const hot = !!sT && sT.last >= thr;
-  if (hot && !wasHot) { hotSince = new Date(); if (cfg.sound) beep(); }
-  if (!hot) hotSince = null;
-  wasHot = hot;
+  const thr = cfg.alertTemp, lthr = cfg.alertLux, l = rows[rows.length - 1];
+  const hotT = !!sT && sT.last >= thr;
+  const lux = l ? l.lux : null;                       // lần đo mới nhất; null = BH1750 chưa đọc được
+  const darkL = lux !== null && lux !== undefined && lux <= lthr;
+  const hot = hotT || darkL;
+  alertState = { hotT, darkL };
 
+  // bíp một lần khi MỘT điều kiện vừa chuyển từ bình thường sang cảnh báo
+  if (((hotT && !wasT) || (darkL && !wasL)) && cfg.sound) beep();
+  if (hot && !wasHot) hotSince = new Date();
+  if (!hot) hotSince = null;
+  wasT = hotT; wasL = darkL; wasHot = hot;
+
+  const tTxt = sT ? `${sT.last.toFixed(1)} °C` : '--';
+  const lTxt = lux === null || lux === undefined ? '-- lux' : `${lux.toFixed(1)} lux`;
   $('alert').classList.toggle('ok', !hot);
   $('alert').setAttribute('role', hot ? 'alert' : 'status');
   $('alertIco').textContent = hot ? '⚠' : '✓';
   if (hot) {
-    $('alertTitle').textContent = `CẢNH BÁO: nhiệt độ vượt ngưỡng ${thr} °C`;
-    $('alertSub').textContent = `Hiện tại ${sT.last.toFixed(1)} °C · bắt đầu lúc ${hotSince.toLocaleTimeString('vi-VN')}`;
+    $('alertTitle').textContent = hotT && darkL ? `CẢNH BÁO: nhiệt độ ≥ ${thr} °C và ánh sáng ≤ ${lthr} lux`
+      : hotT ? `CẢNH BÁO: nhiệt độ vượt ngưỡng ${thr} °C` : `CẢNH BÁO: ánh sáng xuống thấp (≤ ${lthr} lux)`;
+    $('alertSub').textContent = `Nhiệt độ ${tTxt} · ánh sáng ${lTxt} · bắt đầu lúc ${hotSince.toLocaleTimeString('vi-VN')}`;
   } else {
-    $('alertTitle').textContent = `Nhiệt độ bình thường (dưới ${thr} °C)`;
-    $('alertSub').textContent = sT ? `Hiện tại ${sT.last.toFixed(1)} °C` : 'Chưa có dữ liệu';
+    $('alertTitle').textContent = `Nhiệt độ và ánh sáng bình thường`;
+    $('alertSub').textContent = sT ? `Nhiệt độ ${tTxt} (ngưỡng ${thr}) · ánh sáng ${lTxt} (ngưỡng ${lthr})` : 'Chưa có dữ liệu';
   }
-  $('cardT').classList.toggle('hot', hot);
+  $('cardT').classList.toggle('hot', hotT);
+  $('cardL').classList.toggle('hot', darkL);
   const b = $('bT');
-  b.className = 'badge' + (hot ? ' hot' : '');
-  b.textContent = !sT ? '--' : hot ? '⚠ Vượt ngưỡng' : '✓ Bình thường';
+  b.className = 'badge' + (hotT ? ' hot' : '');
+  b.textContent = !sT ? '--' : hotT ? '⚠ Vượt ngưỡng' : '✓ Bình thường';
+  const bl = $('bL');
+  bl.className = 'badge' + (darkL ? ' hot' : '');
+  bl.textContent = lux === null || lux === undefined ? '--' : darkL ? '⚠ Quá tối' : '✓ Bình thường';
   document.title = (hot ? '⚠ ' : '') + 'ESP32 – Giám sát môi trường';
 
   // sơ đồ nguyên lý
   $('ledDot').classList.toggle('on', hot);
   $('ledTxt').textContent = hot ? 'đang nháy' : 'tắt';
-  $('fThr').textContent = `    (≥ ${thr} °C → bật LED GPIO2)`;
-  $('fAlertTxt').textContent = `• cảnh báo ≥ ${thr} °C`;
+  $('fThr').textContent = `    (≥ ${thr} °C hoặc ≤ ${lthr} lux → LED)`;
+  $('fAlertTxt').textContent = `• ≥ ${thr} °C hoặc ≤ ${lthr} lux`;
   $('fAlertState').textContent = hot ? '⚠ ĐANG CẢNH BÁO' : 'Bình thường';
   $('fAlertState').style.fill = hot ? 'var(--bad)' : 'var(--text)';
 }
@@ -651,12 +677,14 @@ const STEPS = [
       return s;
     } },
   { t: 'ESP32 đọc và xử lý', nodes: ['esp'],
-    text: 'Cứ 2 giây ESP32 đọc DHT11 (kéo D4 xuống thấp 18 ms để đánh thức rồi nhận 40 bit) và đọc 2 byte từ BH1750. DHT11 lỗi thì bỏ lần đo; BH1750 lỗi thì đặt lux = −1 và thử khởi tạo lại. Sau đó so nhiệt độ với ngưỡng 31 °C để bật hay tắt LED GPIO2.',
+    text: 'Cứ 2 giây ESP32 đọc DHT11 (kéo D4 xuống thấp 18 ms để đánh thức rồi nhận 40 bit) và đọc 2 byte từ BH1750. DHT11 lỗi thì bỏ lần đo; BH1750 lỗi thì đặt lux = −1 và thử khởi tạo lại. Sau đó so nhiệt độ với ngưỡng 31 °C và ánh sáng với ngưỡng 5 lux để bật hay tắt LED GPIO2.',
     live: l => {
       if (!l) return null;
-      const thr = 31, hot = l.temp >= thr;
+      const thr = 31, hot = l.temp >= thr, dark = l.lux !== null && l.lux <= 5;
       return `float t   = ${fmt(l.temp)};          // °C, từ DHT11\nfloat h   = ${fmt(l.hum, 0)};            // %,  từ DHT11\nfloat lux = ${l.lux === null ? '-1' : fmt(l.lux)};            // lx, từ BH1750\n` +
-             `bool hot  = t >= ${thr.toFixed(1)};   // ${fmt(l.temp)} >= ${thr.toFixed(1)}  →  ${hot ? 'ĐÚNG: LED nháy 250 ms' : 'SAI: LED tắt'}`;
+             `bool hot  = t >= ${thr.toFixed(1)};            // ${fmt(l.temp)} >= ${thr.toFixed(1)}  →  ${hot ? 'ĐÚNG' : 'SAI'}\n` +
+             `bool dark = lux >= 0 && lux <= 5.0;   // ${l.lux === null ? 'chưa có lux' : fmt(l.lux) + ' <= 5.0'}  →  ${l.lux === null ? 'bỏ qua' : dark ? 'ĐÚNG' : 'SAI'}\n` +
+             `LED GPIO2 = (hot || dark) ? nháy 250 ms : tắt   →  ${hot || dark ? 'nháy' : 'tắt'}`;
     } },
   { t: 'Đóng gói thành một dòng chữ', nodes: ['esp'],
     text: 'ESP32 dùng printf tạo đúng một dòng văn bản có ba trường, kết thúc bằng ký tự xuống dòng, rồi đẩy ra cổng USB-UART ở 115200 baud (mỗi ký tự gồm 10 bit gồm bit start và bit stop).',
@@ -683,13 +711,15 @@ const STEPS = [
       return `rows.push({\n  t:    ${l.t.toISOString()},\n  temp: ${fmt(l.temp)},\n  hum:  ${fmt(l.hum, 0)},\n  lux:  ${l.lux === null ? 'null' : fmt(l.lux)}\n});   // đang giữ ${rows.length} / ${cfg.count} bản ghi → vẽ lại 5 đồ thị`;
     } },
   { t: 'Cảnh báo', nodes: ['browser', 'esp'],
-    text: 'Mỗi lần có số mới, trang so nhiệt độ với ngưỡng. Khi vừa chuyển từ bình thường sang vượt ngưỡng: đổi banner sang đỏ và bíp hai tiếng, một lần. Mỗi lần đo ≥ ngưỡng: đánh dấu chấm đỏ trên đồ thị. Song song, ESP32 tự nháy LED GPIO2 mỗi 0,25 giây, không phụ thuộc trình duyệt.',
+    text: 'Có hai điều kiện độc lập: nhiệt độ ≥ ngưỡng (mặc định 31 °C) và ánh sáng ≤ ngưỡng (mặc định 5 lux, tức quá tối). Khi MỘT điều kiện vừa chuyển từ bình thường sang cảnh báo: banner đỏ và bíp hai tiếng, một lần. Mỗi lần đo vi phạm: chấm đỏ trên đồ thị nhiệt độ, cột đỏ trên đồ thị ánh sáng. Song song, ESP32 tự nháy LED GPIO2 mỗi 0,25 giây, không phụ thuộc trình duyệt.',
     live: l => {
       if (!l) return null;
-      const thr = cfg.alertTemp, hot = l.temp >= thr, over = rows.filter(r => r.temp !== null && r.temp >= thr).length;
-      return `nhiệt độ ${fmt(l.temp)} °C  ${hot ? '≥' : '<'}  ngưỡng ${thr} °C   →   ${hot ? 'VƯỢT NGƯỠNG' : 'bình thường'}\n` +
-             `banner: ${hot ? 'đỏ' : 'xám'}   ·   bíp: ${hot ? (wasHot ? 'đã bíp lúc vượt ngưỡng' : 'sẽ bíp') : 'không'}   ·   LED GPIO2: ${hot ? 'nháy' : 'tắt'}\n` +
-             `số lần đo vượt ngưỡng trong ${rows.length} bản ghi: ${over}`;
+      const thr = cfg.alertTemp, lthr = cfg.alertLux, hotT = l.temp >= thr, darkL = l.lux !== null && l.lux <= lthr, hot = hotT || darkL;
+      const overT = rows.filter(r => r.temp !== null && r.temp >= thr).length, overL = rows.filter(r => r.lux !== null && r.lux <= lthr).length;
+      return `nhiệt độ ${fmt(l.temp)} °C  ${hotT ? '≥' : '<'}  ${thr} °C      →  ${hotT ? 'VƯỢT NGƯỠNG' : 'bình thường'}\n` +
+             `ánh sáng ${l.lux === null ? '--' : fmt(l.lux)} lux  ${darkL ? '≤' : '>'}  ${lthr} lux   →  ${l.lux === null ? 'chưa có dữ liệu' : darkL ? 'QUÁ TỐI' : 'bình thường'}\n` +
+             `banner: ${hot ? 'đỏ' : 'xám'}   ·   LED GPIO2: ${hot ? 'nháy' : 'tắt'}   ·   bíp: ${hot ? 'đã bíp lúc vừa vi phạm' : 'không'}\n` +
+             `số lần vi phạm trong ${rows.length} bản ghi: nhiệt độ ${overT}, ánh sáng ${overL}`;
     } },
 ];
 let stepIdx = 0, stepTimer = null;
@@ -735,15 +765,20 @@ function renderPrinciple() {
   $('alThr').textContent = `${thr} °C`;
   $('alResTxt').textContent = !l ? '--' : hot ? '⚠ VƯỢT NGƯỠNG' : '✓ bình thường';
   $('alRes').className = 'al-box' + (!l ? '' : hot ? ' hot' : ' okk');
+  const lthr = cfg.alertLux, hasL = !!l && l.lux !== null, dark = hasL && l.lux <= lthr;
+  $('alL').textContent = hasL ? `${fmt(l.lux)} lux` : '--';
+  $('alLThr').textContent = `${lthr} lux`;
+  $('alLResTxt').textContent = !hasL ? '--' : dark ? '⚠ QUÁ TỐI' : '✓ bình thường';
+  $('alLRes').className = 'al-box' + (!hasL ? '' : dark ? ' hot' : ' okk');
 }
 
 // bảng chỉ dựng khi đang mở, và giữ nguyên vị trí cuộn của người dùng
 function renderTable() {
   if (!$('dataDetails').open) return;
-  const thr = cfg.alertTemp, tw = document.querySelector('.tw'), st = tw.scrollTop;
+  const thr = cfg.alertTemp, lthr = cfg.alertLux, tw = document.querySelector('.tw'), st = tw.scrollTop;
   $('tbody').innerHTML = rows.slice().reverse().map(r => {
-    const over = r.temp !== null && r.temp >= thr;
-    return `<tr class="${over ? 'hot' : ''}"><td>${r.t.toLocaleString('vi-VN')}</td><td>${fmt(r.temp)}${over ? ' ⚠' : ''}</td><td>${fmt(r.hum, 0)}</td><td>${fmt(r.lux, 0)}</td></tr>`;
+    const over = r.temp !== null && r.temp >= thr, dark = r.lux !== null && r.lux <= lthr;
+    return `<tr class="${over || dark ? 'hot' : ''}"><td>${r.t.toLocaleString('vi-VN')}</td><td>${fmt(r.temp)}${over ? ' ⚠' : ''}</td><td>${fmt(r.hum, 0)}</td><td>${fmt(r.lux, 1)}${dark ? ' ⚠' : ''}</td></tr>`;
   }).join('');
   tw.scrollTop = st;
 }
@@ -751,14 +786,17 @@ function renderTable() {
 function render() {
   const thr = cfg.alertTemp;
   const sT = stats('temp'), sH = stats('hum'), sL = stats('lux');
+  const lthr = cfg.alertLux;
   const overCount = rows.filter(r => r.temp !== null && r.temp >= thr).length;
+  const darkCount = rows.filter(r => r.lux !== null && r.lux <= lthr).length;
 
   // thẻ số liệu
   $('vT').innerHTML = sT ? `${fmt(sT.last)}<small>°C</small>` : '--';
   $('vH').innerHTML = sH ? `${fmt(sH.last, 0)}<small>%</small>` : '--';
   $('vL').innerHTML = sL ? `${fmt(sL.last, 0)}<small>lux</small>` : '--';
   $('sT').innerHTML = statLine(sT, 1, '°') + (sT ? `<span>Vượt ngưỡng <b>${overCount} lần</b></span>` : '');
-  $('sH').innerHTML = statLine(sH, 0, '%'); $('sL').innerHTML = statLine(sL, 0, '');
+  $('sH').innerHTML = statLine(sH, 0, '%');
+  $('sL').innerHTML = statLine(sL, 0, '') + (sL ? `<span>Dưới ngưỡng <b>${darkCount} lần</b></span>` : '');
 
   updateAlert(sT);
 
@@ -816,10 +854,10 @@ function render() {
   const b = charts.B;
   b.data.labels = last.map(r => hhmmss(r.t));
   b.data.datasets[0].data = last.map(r => r.lux);
-  b.data.datasets[0].backgroundColor = css('--c-lux');
+  b.data.datasets[0].backgroundColor = last.map(r => r.lux !== null && r.lux <= lthr ? bad : css('--c-lux'));   // cột đỏ = quá tối
   const oB = lineOpts(o, '', 0);
   oB.scales.y.beginAtZero = true;
-  oB.plugins.tooltip.callbacks.label = c => ` ${c.parsed.y.toFixed(0)} lux`;
+  oB.plugins.tooltip.callbacks.label = c => ` ${c.parsed.y.toFixed(1)} lux${c.parsed.y <= lthr ? '  ⚠ quá tối' : ''}`;
   b.options = oB;
   b.update();
 
@@ -936,7 +974,7 @@ $('btnTheme').addEventListener('click', () => {
 $('dataDetails').addEventListener('toggle', renderTable);
 $('btnUsb').addEventListener('click', () => usbOn ? usbDisconnect() : usbConnect());
 $('btnApply').addEventListener('click', async () => { if (usbOn) await usbDisconnect(); readForm(); saveCfg(); start(); $('settings').open = false; });
-['cfgAlert', 'cfgSound'].forEach(id => $(id).addEventListener('input', () => { readAlertForm(); saveCfg(); wasHot = true; render(); }));
+['cfgAlert', 'cfgLux', 'cfgSound'].forEach(id => $(id).addEventListener('input', () => { readAlertForm(); saveCfg(); wasT = wasL = wasHot = true; render(); }));
 document.addEventListener('click', () => { try { audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)(); audioCtx.resume(); } catch (e) {} }, { once: true });
 window.addEventListener('load', () => {
   loadCfg(); applyThemeLabel();
