@@ -124,6 +124,43 @@
   table.data th:first-child, table.data td:first-child { text-align: left; }
   table.data th { position: sticky; top: 0; background: var(--card); color: var(--text2); font-weight: 600; }
   table.data tr.hot td { color: var(--bad); font-weight: 600; }
+  /* nguyên lý: bước, bảng chi tiết */
+  .stepbar { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 10px; align-items: center; }
+  .chip { background: transparent; color: var(--text2); border: 1px solid var(--axis); padding: 6px 12px; font-size: 13px; font-weight: 600; border-radius: 999px; }
+  .chip.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .play { margin-left: auto; padding: 6px 14px; font-size: 13px; }
+  #flowSvg [data-node] { transition: opacity .25s; }
+  #flowSvg.has-step [data-node]:not(.on) { opacity: .3; }
+  #flowSvg [data-node].on .box { stroke: var(--accent); stroke-width: 2.5; }
+  .steppanel { margin-top: 12px; padding: 14px 16px; background: var(--card2); border: 1px solid var(--border); border-radius: 10px; }
+  .sp-head { display: flex; align-items: center; gap: 10px; font-size: 15px; }
+  .sp-num { width: 26px; height: 26px; border-radius: 50%; background: var(--accent); color: #fff; font-weight: 700; font-size: 13px; display: inline-flex; align-items: center; justify-content: center; flex: none; }
+  .steppanel p { margin: 8px 0 10px; font-size: 13px; line-height: 1.6; color: var(--text2); }
+  .sp-lbl { font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+  .livebox { margin: 0; padding: 10px 12px; min-height: 86px; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; color: var(--text);
+             font: 12px/1.65 ui-monospace, Consolas, monospace; overflow-x: auto; white-space: pre; }
+  .detail { margin-top: 12px; margin-bottom: 0; }
+  .sub { background: var(--card2); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; min-width: 0; }
+  .sub h3 { margin: 0 0 8px; font-size: 14px; display: flex; align-items: center; gap: 8px; }
+  .sub ul, .sub ol { margin: 0; padding-left: 18px; font-size: 13px; line-height: 1.6; color: var(--text2); }
+  .sub li { margin-bottom: 5px; } .sub li b { color: var(--text); }
+  .sub code, .steppanel code { font: 12px ui-monospace, Consolas, monospace; background: var(--bg); padding: 1px 5px; border-radius: 4px; color: var(--text); }
+  .tl { list-style: none; padding-left: 0; } .tl li { padding-left: 0; }
+  .rawline { padding: 8px 10px; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; font: 12px/1.7 ui-monospace, Consolas, monospace; overflow-x: auto; white-space: nowrap; min-height: 36px; color: var(--text); }
+  .seg { padding: 1px 4px; border-radius: 4px; font: 12px ui-monospace, Consolas, monospace; }
+  .st { background: color-mix(in srgb, var(--c-temp) 28%, transparent); }
+  .sh { background: color-mix(in srgb, var(--c-hum) 28%, transparent); }
+  .sl { background: color-mix(in srgb, var(--c-lux) 28%, transparent); }
+  table.dec { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 12.5px; }
+  table.dec th, table.dec td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--grid); vertical-align: top; color: var(--text2); }
+  table.dec th { color: var(--text2); font-weight: 600; } table.dec td:nth-child(2) { color: var(--text); font-weight: 600; white-space: nowrap; }
+  .note { font-size: 12px; color: var(--muted); margin: 8px 0 0; word-break: break-word; }
+  .alogic { display: flex; flex-wrap: wrap; align-items: stretch; gap: 8px; margin-bottom: 10px; }
+  .al-box { display: flex; flex-direction: column; gap: 2px; padding: 8px 14px; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; min-width: 120px; }
+  .al-box b { font-size: 20px; font-variant-numeric: tabular-nums; } .al-k { font-size: 11.5px; color: var(--muted); }
+  .al-op { align-self: center; font-size: 20px; color: var(--muted); }
+  .al-box.hot { border-color: var(--bad); background: var(--bad-bg); } .al-box.hot b { color: var(--bad); }
+  .al-box.okk b { color: var(--ok); }
   footer { margin-top: 16px; font-size: 12px; color: var(--muted); }
   @media (prefers-reduced-motion: reduce) { .alert-ico, svg #ledDot.on { animation: none; } svg .pulse-dot { display: none !important; } }
 </style>
@@ -208,16 +245,26 @@
   <!-- ====== NGUYÊN LÝ HOẠT ĐỘNG ====== -->
   <section class="card" id="flow" style="margin-bottom:12px">
     <h2>Nguyên lý hoạt động</h2>
-    <p class="desc">Dữ liệu đi từ cảm biến → ESP32 → (USB hoặc WiFi + ThingSpeak) → trình duyệt. Đường đang dùng sẽ sáng lên và có chấm chạy; số liệu trong sơ đồ là số liệu thật đang nhận.</p>
+    <p class="desc">Dữ liệu đi từ cảm biến → ESP32 → (USB hoặc WiFi + ThingSpeak) → trình duyệt. Chọn từng bước hoặc bấm “Tự chạy”; số liệu minh họa trong mỗi bước được tính từ số đo thật đang nhận.</p>
     <div class="modebar">Chế độ hiện tại: <b id="modeLabel">Chưa kết nối</b></div>
+
+    <div class="stepbar" id="stepbar" role="group" aria-label="Chọn bước">
+      <button class="chip" data-i="0">1 Đo</button>
+      <button class="chip" data-i="1">2 Xử lý</button>
+      <button class="chip" data-i="2">3 Đóng gói</button>
+      <button class="chip" data-i="3">4 Truyền</button>
+      <button class="chip" data-i="4">5 Hiển thị</button>
+      <button class="chip" data-i="5">6 Cảnh báo</button>
+      <button class="secondary play" id="btnPlay">▶ Tự chạy</button>
+    </div>
+
     <div class="svgwrap">
-      <svg viewBox="0 0 1000 430" role="img" aria-label="Sơ đồ luồng dữ liệu từ cảm biến qua ESP32 đến trình duyệt">
+      <svg id="flowSvg" viewBox="0 0 1000 430" role="img" aria-label="Sơ đồ luồng dữ liệu từ cảm biến qua ESP32 đến trình duyệt">
         <defs>
           <marker id="arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="var(--muted)"/></marker>
         </defs>
 
-        <!-- dây cảm biến -> ESP32 -->
-        <g class="g-sens">
+        <g class="g-sens" data-node="wires">
           <path id="w1" class="wire" d="M230 95 C 280 95, 280 165, 320 165" marker-end="url(#arr)"/>
           <path id="w2" class="wire" d="M230 285 C 280 285, 280 245, 320 245" marker-end="url(#arr)"/>
           <text class="t-wire" x="236" y="84">tín hiệu số 1 dây</text>
@@ -226,40 +273,41 @@
           <circle class="pulse-dot" r="4" fill="var(--c-lux)"><animateMotion dur="2s" repeatCount="indefinite"><mpath href="#w2"/></animateMotion></circle>
         </g>
 
-        <!-- DHT11 -->
-        <rect class="box" x="20" y="40" width="210" height="110" rx="10"/>
-        <text class="t-title" x="36" y="65">DHT11</text>
-        <text x="36" y="84">Nhiệt độ · Độ ẩm</text>
-        <text x="36" y="102" class="t-wire">chân S → D4</text>
-        <text id="fDHT" class="t-live" x="36" y="132">-- °C · -- %</text>
+        <g data-node="dht">
+          <rect class="box" x="20" y="40" width="210" height="110" rx="10"/>
+          <text class="t-title" x="36" y="65">DHT11</text>
+          <text x="36" y="84">Nhiệt độ · Độ ẩm</text>
+          <text x="36" y="102" class="t-wire">chân S → D4</text>
+          <text id="fDHT" class="t-live" x="36" y="132">-- °C · -- %</text>
+        </g>
 
-        <!-- BH1750 -->
-        <rect class="box" x="20" y="230" width="210" height="110" rx="10"/>
-        <text class="t-title" x="36" y="255">BH1750</text>
-        <text x="36" y="274">Ánh sáng (lux)</text>
-        <text x="36" y="292" class="t-wire">SDA → D21 · SCL → D19</text>
-        <text id="fLux" class="t-live" x="36" y="322">-- lux</text>
+        <g data-node="bh">
+          <rect class="box" x="20" y="230" width="210" height="110" rx="10"/>
+          <text class="t-title" x="36" y="255">BH1750</text>
+          <text x="36" y="274">Ánh sáng (lux)</text>
+          <text x="36" y="292" class="t-wire">SDA → D21 · SCL → D19</text>
+          <text id="fLux" class="t-live" x="36" y="322">-- lux</text>
+        </g>
 
-        <!-- ESP32 -->
-        <rect class="box" x="320" y="100" width="250" height="210" rx="10"/>
-        <text class="t-title" x="338" y="126">ESP32</text>
-        <text x="338" y="150">① đọc 2 cảm biến mỗi 2 giây</text>
-        <text x="338" y="170">② so sánh với ngưỡng cảnh báo</text>
-        <text id="fThr" x="338" y="190">    (≥ 31 °C → bật LED GPIO2)</text>
-        <text x="338" y="210">③ in 1 dòng chữ ra cổng USB</text>
-        <text x="338" y="230">④ (tuỳ chọn) gửi WiFi mỗi 20 giây</text>
-        <circle id="ledDot" cx="346" cy="268" r="7" stroke-width="2"/>
-        <text x="362" y="272">LED GPIO2: <tspan id="ledTxt">tắt</tspan></text>
+        <g data-node="esp">
+          <rect class="box" x="320" y="100" width="250" height="210" rx="10"/>
+          <text class="t-title" x="338" y="126">ESP32</text>
+          <text x="338" y="150">① đọc 2 cảm biến mỗi 2 giây</text>
+          <text x="338" y="170">② so sánh với ngưỡng cảnh báo</text>
+          <text id="fThr" x="338" y="190">    (≥ 31 °C → bật LED GPIO2)</text>
+          <text x="338" y="210">③ in 1 dòng chữ ra cổng USB</text>
+          <text x="338" y="230">④ (tuỳ chọn) gửi WiFi mỗi 20 giây</text>
+          <circle id="ledDot" cx="346" cy="268" r="7" stroke-width="2"/>
+          <text x="362" y="272">LED GPIO2: <tspan id="ledTxt">tắt</tspan></text>
+        </g>
 
-        <!-- Đường USB -->
-        <g class="g-usb">
+        <g class="g-usb" data-node="link">
           <path id="pUsb" class="wire p-usb" d="M570 150 C 680 150, 700 130, 790 130" marker-end="url(#arr)"/>
           <text class="t-wire" x="590" y="122">USB Serial · 115200 baud</text>
           <circle class="pulse-dot" r="5" fill="var(--accent)"><animateMotion dur="1.6s" repeatCount="indefinite"><mpath href="#pUsb"/></animateMotion></circle>
         </g>
 
-        <!-- Đường đám mây -->
-        <g class="g-cloud">
+        <g class="g-cloud" data-node="link">
           <path id="pC1" class="wire p-cloud" d="M445 310 V365 H590" marker-end="url(#arr)"/>
           <text class="t-wire" x="455" y="385">WiFi · HTTPS</text>
           <text class="t-wire" x="455" y="399">mỗi 20 giây</text>
@@ -273,34 +321,95 @@
           <circle class="pulse-dot" r="5" fill="var(--accent)"><animateMotion dur="2.4s" begin="1.2s" repeatCount="indefinite"><mpath href="#pC2"/></animateMotion></circle>
         </g>
 
-        <!-- Trình duyệt -->
-        <rect class="box" x="790" y="60" width="190" height="200" rx="10"/>
-        <text class="t-title" x="806" y="86">Trình duyệt</text>
-        <text x="806" y="106">Dashboard (trang này)</text>
-        <text x="806" y="132">• phân tích dòng chữ</text>
-        <text x="806" y="152">• vẽ 4 loại đồ thị</text>
-        <text x="806" y="172">• lưu bảng số liệu</text>
-        <text id="fAlertTxt" x="806" y="192">• cảnh báo ≥ 31 °C</text>
-        <text id="fAlertState" class="t-live" x="806" y="228">Bình thường</text>
+        <g data-node="browser">
+          <rect class="box" x="790" y="60" width="190" height="200" rx="10"/>
+          <text class="t-title" x="806" y="86">Trình duyệt</text>
+          <text x="806" y="106">Dashboard (trang này)</text>
+          <text x="806" y="132">• phân tích dòng chữ</text>
+          <text x="806" y="152">• vẽ 4 loại đồ thị</text>
+          <text x="806" y="172">• lưu bảng số liệu</text>
+          <text id="fAlertTxt" x="806" y="192">• cảnh báo ≥ 31 °C</text>
+          <text id="fAlertState" class="t-live" x="806" y="228">Bình thường</text>
+        </g>
       </svg>
     </div>
-    <div class="raw">Dữ liệu vừa nhận (đi qua đường đang dùng):<code id="rawLine">—</code></div>
 
-    <ol class="steps">
-      <li><b>Cảm biến đo.</b> DHT11 gồm cảm biến điện dung (độ ẩm) và nhiệt điện trở (nhiệt độ), gửi kết quả số về chân D4 bằng 1 dây. BH1750 có photodiode và bộ ADC 16 bit, trả số lux qua I2C (SDA D21, SCL D19, địa chỉ 0x23).</li>
-      <li><b>ESP32 xử lý.</b> Mỗi 2 giây ESP32 đọc cả hai cảm biến, kiểm tra lỗi. Nếu nhiệt độ ≥ ngưỡng cảnh báo thì LED GPIO2 trên board nháy liên tục.</li>
-      <li><b>Đóng gói thành 1 dòng chữ.</b> Ví dụ <code style="font:12px ui-monospace,Consolas,monospace">Nhiet do: 27.4 C | Do am: 69 % | Anh sang: 320.0 lux</code> được in ra cổng USB.</li>
-      <li><b>Hai đường về trình duyệt.</b> (A) <b>USB:</b> trang web dùng Web Serial đọc trực tiếp dòng chữ trên. (B) <b>Đám mây:</b> ESP32 gửi mỗi 20 giây lên ThingSpeak qua WiFi, trang web gọi REST API lấy các bản ghi gần nhất.</li>
-      <li><b>Hiển thị.</b> Trình duyệt tách 3 số từ dòng chữ (hoặc JSON), cập nhật thẻ số liệu, bảng và 5 đồ thị: đường, cột, tròn, phân tán.</li>
-      <li><b>Cảnh báo.</b> Khi lần đo mới nhất ≥ ngưỡng (mặc định 31 °C, chỉnh được ở phần Cấu hình): hiện banner đỏ, phát tiếng bíp, đánh dấu chấm đỏ trên đồ thị và bật LED trên ESP32.</li>
-    </ol>
+    <div class="steppanel" id="stepPanel" aria-live="polite">
+      <div class="sp-head"><span class="sp-num" id="spNum">1</span><b id="spTitle"></b></div>
+      <p id="spText"></p>
+      <div class="sp-lbl">Dữ liệu ở bước này (tính từ số đo hiện tại)</div>
+      <pre id="spLive" class="livebox"></pre>
+    </div>
+
+    <div class="grid2 detail">
+      <div class="sub">
+        <h3><span class="swatch" style="background:var(--c-temp)"></span>DHT11 đo nhiệt độ và độ ẩm</h3>
+        <ul>
+          <li><b>Bên trong:</b> một nhiệt điện trở cho nhiệt độ và một tụ điện có điện dung đổi theo độ ẩm; chip nhỏ đổi cả hai sang số.</li>
+          <li><b>Giao tiếp 1 dây (chân S → D4):</b> ESP32 kéo đường xuống thấp ít nhất 18 ms để “đánh thức”, DHT11 đáp lại rồi gửi <b>40 bit</b>: 16 bit độ ẩm, 16 bit nhiệt độ, 8 bit kiểm tra (tổng của 4 byte đầu).</li>
+          <li><b>Cách mã hoá bit:</b> mỗi bit bắt đầu bằng mức thấp ~50 µs; sau đó mức cao ~26–28 µs là bit <code>0</code>, ~70 µs là bit <code>1</code>. Cả lần đọc mất khoảng 25 ms.</li>
+          <li><b>Giới hạn:</b> độ chính xác khoảng ±2 °C và ±5 % độ ẩm; chỉ nên đọc tối đa 1 lần mỗi giây, nên hệ thống đọc mỗi 2 giây.</li>
+        </ul>
+      </div>
+      <div class="sub">
+        <h3><span class="swatch" style="background:var(--c-lux)"></span>BH1750 đo ánh sáng</h3>
+        <ul>
+          <li><b>Bên trong:</b> photodiode có độ nhạy gần giống mắt người và bộ ADC 16 bit, kết quả đã quy ra lux.</li>
+          <li><b>Giao tiếp I2C (SDA → D21, SCL → D19):</b> thư viện gửi lệnh <code>0x10</code> (đo liên tục, độ phân giải cao 1 lx, ~120 ms mỗi lần), rồi đọc <b>2 byte</b> kết quả.</li>
+          <li><b>Công thức:</b> lux = giá trị 16 bit ÷ 1,2. Ví dụ <code>0x0140</code> = 320 → 320 ÷ 1,2 ≈ 267 lux.</li>
+          <li><b>Địa chỉ:</b> chân ADDR để trống (có điện trở kéo xuống GND ngay trên module) → địa chỉ <code>0x23</code>; nối lên mức cao → <code>0x5C</code>. Vì vậy dây ADDR không được nối vào SCL.</li>
+        </ul>
+      </div>
+      <div class="sub">
+        <h3>Một chu kỳ đo (2 giây)</h3>
+        <ol class="tl">
+          <li><b>0 ms</b> — vòng lặp thấy đã đủ 2 giây kể từ lần đo trước.</li>
+          <li><b>0–25 ms</b> — đọc DHT11 (18 ms tín hiệu bắt đầu + khoảng 5 ms dữ liệu).</li>
+          <li><b>~25 ms</b> — đọc 2 byte BH1750 qua I2C (rất nhanh, dưới 1 ms); nếu lỗi thì đặt lux = −1 và khởi tạo lại.</li>
+          <li><b>~30 ms</b> — so nhiệt độ với ngưỡng, bật hoặc tắt chế độ nháy LED.</li>
+          <li><b>~35 ms</b> — in 1 dòng khoảng 52 ký tự ra USB (≈ 4,5 ms ở 115200 baud).</li>
+          <li><b>35–2000 ms</b> — rảnh; nếu đang cảnh báo, LED đảo trạng thái mỗi 250 ms.</li>
+          <li><b>Mỗi 20 giây</b> — nếu bật WiFi, gửi 1 yêu cầu HTTPS lên ThingSpeak (bản miễn phí yêu cầu cách nhau ≥ 15 giây).</li>
+        </ol>
+      </div>
+      <div class="sub">
+        <h3>Giải mã dòng dữ liệu (số liệu mới nhất)</h3>
+        <div class="rawline" id="decLine">—</div>
+        <table class="dec">
+          <thead><tr><th>Đoạn trong dòng</th><th>Giá trị</th><th>Dùng để</th></tr></thead>
+          <tbody>
+            <tr><td><span class="seg st">Nhiet do: … C</span></td><td id="decT">--</td><td>thẻ nhiệt độ, đồ thị đường, đồ thị phân tán, cảnh báo</td></tr>
+            <tr><td><span class="seg sh">Do am: … %</span></td><td id="decH">--</td><td>thẻ độ ẩm, đồ thị đường, đồ thị phân tán</td></tr>
+            <tr><td><span class="seg sl">Anh sang: … lux</span></td><td id="decL">--</td><td>thẻ ánh sáng, đồ thị cột, đồ thị tròn (−1 = chưa đọc được)</td></tr>
+          </tbody>
+        </table>
+        <p class="note">Biểu thức chính quy: <code>/Nhiet do:\s*(-?[\d.]+)\s*C.*Do am:\s*([\d.]+)\s*%.*Anh sang:\s*(-?[\d.]+)/i</code></p>
+      </div>
+      <div class="sub" style="grid-column: 1 / -1">
+        <h3>Logic cảnh báo</h3>
+        <div class="alogic">
+          <div class="al-box"><span class="al-k">nhiệt độ mới nhất</span><b id="alT">--</b></div>
+          <div class="al-op">≥</div>
+          <div class="al-box"><span class="al-k">ngưỡng (chỉnh được)</span><b id="alThr">31 °C</b></div>
+          <div class="al-op">→</div>
+          <div class="al-box" id="alRes"><span class="al-k">kết quả</span><b id="alResTxt">--</b></div>
+        </div>
+        <ul>
+          <li><b>Trên trang web:</b> khi vừa chuyển từ bình thường sang vượt ngưỡng thì đổi banner sang đỏ và bíp hai tiếng (chỉ một lần, không bíp lặp); mỗi lần đo vượt ngưỡng đều có chấm đỏ trên đồ thị và dòng đỏ trong bảng.</li>
+          <li><b>Trên ESP32:</b> cùng một phép so sánh <code>t ≥ ALERT_TEMP</code> (31 °C trong firmware); khi đúng thì LED GPIO2 nháy 250 ms, serial in <code>CANH BAO</code>. Phần này chạy độc lập với trình duyệt.</li>
+          <li><b>Hai ngưỡng tách riêng:</b> đổi ngưỡng trên web không đổi ngưỡng của LED; muốn đổi LED phải sửa <code>ALERT_TEMP</code> rồi nạp lại firmware.</li>
+        </ul>
+      </div>
+    </div>
 
     <table class="pins">
       <thead><tr><th>Linh kiện</th><th>Chân module</th><th>Chân ESP32</th><th>Ghi chú</th></tr></thead>
       <tbody>
         <tr><td>DHT11</td><td>S (+, −)</td><td>D4 (3V3, GND)</td><td>1 dây dữ liệu, module có sẵn điện trở kéo lên</td></tr>
-        <tr><td>BH1750</td><td>SDA, SCL</td><td>D21, D19</td><td>I2C, ADDR để trống → địa chỉ 0x23</td></tr>
-        <tr><td>BH1750</td><td>VCC, GND</td><td>3V3, GND</td><td>cấp nguồn 3,3 V</td></tr>
+        <tr><td>BH1750</td><td>2 SCL (dây nâu)</td><td>D19</td><td>I2C clock</td></tr>
+        <tr><td>BH1750</td><td>3 DAT = SDA (dây trắng)</td><td>D21</td><td>I2C data</td></tr>
+        <tr><td>BH1750</td><td>1 VCC (đỏ), 4 GND (đen)</td><td>3V3, GND</td><td>cấp nguồn 3,3 V</td></tr>
+        <tr><td>BH1750</td><td>5 ADDR (dây vàng)</td><td>để trống</td><td>địa chỉ 0x23; không nối vào SCL</td></tr>
       </tbody>
     </table>
   </section>
@@ -514,6 +623,120 @@ function ensureCharts() {
   charts.S = mk('chS', { type: 'scatter', data: { datasets: [{ data: [], pointBorderWidth: 2 }] }, options: {} });
 }
 
+/* ---------- nguyên lý hoạt động: từng bước, số liệu minh họa tính từ số đo thật ---------- */
+const bin8 = n => (n & 255).toString(2).padStart(8, '0');
+const esc = s => String(s).replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+
+function dhtFrame(t, h) {            // dựng lại 40 bit DHT11 từ giá trị hiện tại (minh họa)
+  const hi = Math.floor(h), hd = Math.round((h - hi) * 10), ti = Math.floor(t), td = Math.round((t - ti) * 10);
+  return { hi, hd, ti, td, chk: (hi + hd + ti + td) & 255 };
+}
+function lastLine(l) {               // dòng chữ tương ứng với lần đo mới nhất
+  if (!l) return '';
+  if (document.body.dataset.mode === 'usb' && lastRaw) return lastRaw;
+  return `Nhiet do: ${fmt(l.temp)} C | Do am: ${fmt(l.hum, 0)} % | Anh sang: ${l.lux === null ? '-1.0' : fmt(l.lux)} lux`;
+}
+
+const STEPS = [
+  { t: 'Cảm biến đo', nodes: ['dht', 'bh', 'wires'],
+    text: 'DHT11 đo nhiệt độ bằng nhiệt điện trở và độ ẩm bằng tụ điện (điện dung đổi theo độ ẩm), rồi đổi sang tín hiệu số 40 bit gửi qua 1 dây vào D4. BH1750 đo ánh sáng bằng photodiode và bộ ADC 16 bit, trả kết quả qua I2C (SDA D21, SCL D19, địa chỉ 0x23).',
+    live: l => {
+      if (!l) return null;
+      const f = dhtFrame(l.temp, l.hum);
+      let s = `DHT11 – 5 byte (40 bit) gửi lên đường dữ liệu D4:\n` +
+              `  ${[f.hi, f.hd, f.ti, f.td, f.chk].map(bin8).join('  ')}\n` +
+              `  ẩm ${f.hi}.${f.hd} %   nhiệt ${f.ti}.${f.td} °C   kiểm tra = ${f.chk}  (tổng 4 byte đầu, giữ 8 bit)\n`;
+      if (l.lux === null) s += 'BH1750 – chưa đọc được (lux = −1)';
+      else { const raw = Math.round(l.lux * 1.2); s += `BH1750 – 2 byte qua I2C: 0x${raw.toString(16).toUpperCase().padStart(4, '0')} = ${raw}   →   ${raw} ÷ 1,2 = ${fmt(raw / 1.2)} lux`; }
+      return s;
+    } },
+  { t: 'ESP32 đọc và xử lý', nodes: ['esp'],
+    text: 'Cứ 2 giây ESP32 đọc DHT11 (kéo D4 xuống thấp 18 ms để đánh thức rồi nhận 40 bit) và đọc 2 byte từ BH1750. DHT11 lỗi thì bỏ lần đo; BH1750 lỗi thì đặt lux = −1 và thử khởi tạo lại. Sau đó so nhiệt độ với ngưỡng 31 °C để bật hay tắt LED GPIO2.',
+    live: l => {
+      if (!l) return null;
+      const thr = 31, hot = l.temp >= thr;
+      return `float t   = ${fmt(l.temp)};          // °C, từ DHT11\nfloat h   = ${fmt(l.hum, 0)};            // %,  từ DHT11\nfloat lux = ${l.lux === null ? '-1' : fmt(l.lux)};            // lx, từ BH1750\n` +
+             `bool hot  = t >= ${thr.toFixed(1)};   // ${fmt(l.temp)} >= ${thr.toFixed(1)}  →  ${hot ? 'ĐÚNG: LED nháy 250 ms' : 'SAI: LED tắt'}`;
+    } },
+  { t: 'Đóng gói thành một dòng chữ', nodes: ['esp'],
+    text: 'ESP32 dùng printf tạo đúng một dòng văn bản có ba trường, kết thúc bằng ký tự xuống dòng, rồi đẩy ra cổng USB-UART ở 115200 baud (mỗi ký tự gồm 10 bit gồm bit start và bit stop).',
+    live: l => {
+      if (!l) return null;
+      const line = lastLine(l), bytes = line.length + 1;
+      return `${line}\n` +
+             `độ dài ${bytes} byte (kể cả ký tự xuống dòng)  →  ${bytes} × 10 bit ÷ 115200 baud ≈ ${(bytes * 10 / 115200 * 1000).toFixed(1)} ms`;
+    } },
+  { t: 'Truyền về trình duyệt', nodes: ['link'],
+    text: 'Đường A (USB): chip CP2102 đổi UART thành USB, trang web đọc dòng chữ trực tiếp bằng Web Serial. Đường B (đám mây): cứ 20 giây ESP32 gửi một yêu cầu HTTPS tới ThingSpeak; trang web hỏi lại ThingSpeak qua REST API và nhận JSON.',
+    live: l => {
+      if (!l) return null;
+      const m = document.body.dataset.mode;
+      const a = `USB  : ${lastLine(l)}`;
+      const b = `ESP32 → ThingSpeak:\n  GET https://api.thingspeak.com/update?api_key=••••••••&field1=${fmt(l.temp)}&field2=${fmt(l.hum)}&field3=${l.lux === null ? '' : fmt(l.lux)}\n` +
+                `Trình duyệt ← ThingSpeak:\n  GET https://api.thingspeak.com/channels/<id>/feeds.json?results=${cfg.count}`;
+      return m === 'usb' ? a : m === 'cloud' ? b : a + '\n\n' + b;
+    } },
+  { t: 'Giải mã và hiển thị', nodes: ['browser'],
+    text: 'Trình duyệt dùng biểu thức chính quy tách ba số từ dòng chữ (hoặc đọc 3 field của JSON), thêm thời điểm nhận, lưu vào mảng và vẽ lại thẻ số liệu, bảng và 5 đồ thị bằng Chart.js. Lux = −1 được hiểu là “chưa có dữ liệu”.',
+    live: l => {
+      if (!l) return null;
+      return `rows.push({\n  t:    ${l.t.toISOString()},\n  temp: ${fmt(l.temp)},\n  hum:  ${fmt(l.hum, 0)},\n  lux:  ${l.lux === null ? 'null' : fmt(l.lux)}\n});   // đang giữ ${rows.length} / ${cfg.count} bản ghi → vẽ lại 5 đồ thị`;
+    } },
+  { t: 'Cảnh báo', nodes: ['browser', 'esp'],
+    text: 'Mỗi lần có số mới, trang so nhiệt độ với ngưỡng. Khi vừa chuyển từ bình thường sang vượt ngưỡng: đổi banner sang đỏ và bíp hai tiếng, một lần. Mỗi lần đo ≥ ngưỡng: đánh dấu chấm đỏ trên đồ thị. Song song, ESP32 tự nháy LED GPIO2 mỗi 0,25 giây, không phụ thuộc trình duyệt.',
+    live: l => {
+      if (!l) return null;
+      const thr = cfg.alertTemp, hot = l.temp >= thr, over = rows.filter(r => r.temp !== null && r.temp >= thr).length;
+      return `nhiệt độ ${fmt(l.temp)} °C  ${hot ? '≥' : '<'}  ngưỡng ${thr} °C   →   ${hot ? 'VƯỢT NGƯỠNG' : 'bình thường'}\n` +
+             `banner: ${hot ? 'đỏ' : 'xám'}   ·   bíp: ${hot ? (wasHot ? 'đã bíp lúc vượt ngưỡng' : 'sẽ bíp') : 'không'}   ·   LED GPIO2: ${hot ? 'nháy' : 'tắt'}\n` +
+             `số lần đo vượt ngưỡng trong ${rows.length} bản ghi: ${over}`;
+    } },
+];
+let stepIdx = 0, stepTimer = null;
+
+function setStep(i) {
+  stepIdx = i;
+  document.querySelectorAll('#stepbar .chip').forEach((b, k) => { b.classList.toggle('on', k === i); b.setAttribute('aria-pressed', k === i); });
+  $('flowSvg').classList.add('has-step');
+  $('flowSvg').querySelectorAll('[data-node]').forEach(n => n.classList.toggle('on', STEPS[i].nodes.includes(n.dataset.node)));
+  $('spNum').textContent = i + 1;
+  $('spTitle').textContent = STEPS[i].t;
+  $('spText').textContent = STEPS[i].text;
+  renderStepLive();
+}
+function renderStepLive() {
+  const l = rows[rows.length - 1];
+  const s = STEPS[stepIdx].live(l);
+  $('spLive').textContent = s === null ? 'Chưa có số đo. Hãy kết nối USB hoặc bật chế độ demo để thấy số liệu thật ở đây.' : s;
+}
+function togglePlay() {
+  if (stepTimer) { clearInterval(stepTimer); stepTimer = null; $('btnPlay').textContent = '▶ Tự chạy'; return; }
+  $('btnPlay').textContent = '⏸ Dừng';
+  stepTimer = setInterval(() => setStep((stepIdx + 1) % STEPS.length), 4500);
+}
+
+function renderPrinciple() {
+  const l = rows[rows.length - 1];
+  renderStepLive();
+  // giải mã dòng dữ liệu
+  const line = lastLine(l);
+  if (!l) {
+    $('decLine').textContent = '—'; $('decT').textContent = $('decH').textContent = $('decL').textContent = '--';
+  } else {
+    const cls = ['st', 'sh', 'sl'];
+    $('decLine').innerHTML = line.split(' | ').map((p, i) => `<span class="seg ${cls[i] || ''}">${esc(p)}</span>`).join(' | ');
+    $('decT').textContent = `${fmt(l.temp)} °C`;
+    $('decH').textContent = `${fmt(l.hum, 0)} %`;
+    $('decL').textContent = l.lux === null ? '−1 → chưa có dữ liệu' : `${fmt(l.lux)} lux`;
+  }
+  // logic cảnh báo
+  const thr = cfg.alertTemp, hot = !!l && l.temp !== null && l.temp >= thr;
+  $('alT').textContent = l ? `${fmt(l.temp)} °C` : '--';
+  $('alThr').textContent = `${thr} °C`;
+  $('alResTxt').textContent = !l ? '--' : hot ? '⚠ VƯỢT NGƯỠNG' : '✓ bình thường';
+  $('alRes').className = 'al-box' + (!l ? '' : hot ? ' hot' : ' okk');
+}
+
 // bảng chỉ dựng khi đang mở, và giữ nguyên vị trí cuộn của người dùng
 function renderTable() {
   if (!$('dataDetails').open) return;
@@ -542,7 +765,7 @@ function render() {
   // sơ đồ nguyên lý: số liệu thật
   $('fDHT').textContent = `${sT ? fmt(sT.last) : '--'} °C · ${sH ? fmt(sH.last, 0) : '--'} %`;
   $('fLux').textContent = `${sL ? fmt(sL.last, 0) : '--'} lux`;
-  $('rawLine').textContent = lastRaw || '—';
+  renderPrinciple();
 
   renderTable();
 
@@ -685,7 +908,7 @@ function usbLine(line) {
     setStatus('USB · đang nhận dữ liệu · ' + hhmmss(new Date()), 'ok');
   } else if (/LOI|CANH BAO/i.test(line)) {
     lastRaw = line;
-    $('rawLine').textContent = line;
+    renderPrinciple();
     setStatus('ESP32 báo: ' + line, 'bad');
   }
 }
@@ -716,7 +939,14 @@ $('btnApply').addEventListener('click', async () => { if (usbOn) await usbDiscon
 ['cfgAlert', 'cfgSound'].forEach(id => $(id).addEventListener('input', () => { readAlertForm(); saveCfg(); wasHot = true; render(); }));
 document.addEventListener('click', () => { try { audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)(); audioCtx.resume(); } catch (e) {} }, { once: true });
 window.addEventListener('load', () => {
-  loadCfg(); applyThemeLabel(); render();
+  loadCfg(); applyThemeLabel();
+  document.querySelectorAll('#stepbar .chip').forEach(b => b.addEventListener('click', () => {
+    if (stepTimer) togglePlay();            // chọn tay thì dừng tự chạy
+    setStep(+b.dataset.i);
+  }));
+  $('btnPlay').addEventListener('click', togglePlay);
+  setStep(0);
+  render();
   if (cfg.demo || cfg.channel) { $('settings').open = false; start(); }
 });
 </script>
