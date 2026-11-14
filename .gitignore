@@ -8,3 +8,6 @@ tools/arduino-cli/
 ~WRL*.tmp
 hinh_baocao/
 *.pptx
+.vercel/
+.vercel
+.env*

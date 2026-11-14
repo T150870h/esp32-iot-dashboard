@@ -200,7 +200,7 @@
       <div><label for="cfgCount">Số bản ghi hiển thị</label><input type="number" id="cfgCount" min="10" max="500" value="60"></div>
       <div><label for="cfgPoll">Làm mới mỗi (giây)</label><input type="number" id="cfgPoll" min="5" max="300" value="20"></div>
       <label class="check"><input type="checkbox" id="cfgDemo"> Chế độ demo (dữ liệu giả lập)</label>
-      <div><button id="btnApply">Áp dụng &amp; kết nối</button></div>
+      <div><button id="btnApply">Áp dụng &amp; kết nối</button> <button id="btnShare" type="button">Sao chép link xem từ xa</button></div>
     </div>
     <p class="help">Ngưỡng và tiếng bíp có hiệu lực ngay khi thay đổi. Field 1 = Nhiệt độ (°C) · Field 2 = Độ ẩm (%) · Field 3 = Ánh sáng (lux).
       Cấu hình được lưu trong trình duyệt này. Chế độ demo cho xem thử giao diện khi chưa có ESP32.</p>
@@ -587,7 +587,7 @@ function start() {
   setStatus('Đang kết nối…', '');
   if (!cfg.demo && !cfg.fbView && !cfg.channel) { setMode('idle'); setStatus('Hãy bấm “Kết nối USB” hoặc nhập cấu hình', ''); return; }
   refresh();
-  timer = setInterval(refresh, (cfg.demo ? Math.min(cfg.poll, 3) : cfg.poll) * 1000);
+  timer = setInterval(refresh, (cfg.demo ? Math.min(cfg.poll, 3) : cfg.fbView ? Math.min(cfg.poll, 5) : cfg.poll) * 1000);
 }
 
 /* ---------- cảnh báo nhiệt độ ---------- */
@@ -1022,8 +1022,28 @@ $('btnUsb').addEventListener('click', () => usbOn ? usbDisconnect() : usbConnect
 $('btnApply').addEventListener('click', async () => { if (usbOn) await usbDisconnect(); readForm(); saveCfg(); start(); $('settings').open = false; });
 ['cfgAlert', 'cfgLux', 'cfgSound'].forEach(id => $(id).addEventListener('input', () => { readAlertForm(); saveCfg(); wasT = wasL = wasHot = true; render(); }));
 document.addEventListener('click', () => { try { audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)(); audioCtx.resume(); } catch (e) {} }, { once: true });
+/* link xem từ xa: <trang>#fb=<Database URL> → tự bật chế độ xem từ Firebase */
+function shareLink() {
+  readForm();
+  if (!/^https:\/\/.+/.test(cfg.fbUrl)) { setStatus('Nhập Firebase Database URL (https://…) trước khi tạo link', 'bad'); return; }
+  const link = location.origin + location.pathname + '#fb=' + encodeURIComponent(cfg.fbUrl);
+  const done = () => setStatus('Đã sao chép link: mở trên thiết bị khác để xem dữ liệu', 'ok');
+  if (navigator.clipboard && window.isSecureContext) navigator.clipboard.writeText(link).then(done, () => prompt('Sao chép link này:', link));
+  else prompt('Sao chép link này:', link);
+}
+function applyHashConfig() {
+  const m = location.hash.match(/[#&]fb=([^&]+)/);
+  if (!m) return false;
+  let u = ''; try { u = decodeURIComponent(m[1]); } catch (e) {}
+  if (!/^(https:\/\/|http:\/\/localhost).+/.test(u)) return false;
+  cfg.fbUrl = u.replace(/\/+$/, ''); cfg.fbView = true; cfg.fbSave = false; cfg.demo = false;
+  $('cfgFbUrl').value = cfg.fbUrl; $('cfgFbView').checked = true; $('cfgFbSave').checked = false; $('cfgDemo').checked = false;
+  return true;
+}
 window.addEventListener('load', () => {
   loadCfg(); applyThemeLabel();
+  $('btnShare').addEventListener('click', shareLink);
+  const fromLink = applyHashConfig();
   document.querySelectorAll('#stepbar .chip').forEach(b => b.addEventListener('click', () => {
     if (stepTimer) togglePlay();            // chọn tay thì dừng tự chạy
     setStep(+b.dataset.i);
@@ -1031,6 +1051,7 @@ window.addEventListener('load', () => {
   $('btnPlay').addEventListener('click', togglePlay);
   setStep(0);
   render();
+  if (fromLink) saveCfg();
   if (cfg.demo || cfg.channel || (cfg.fbView && cfg.fbUrl)) { $('settings').open = false; start(); }
 });
 </script>
